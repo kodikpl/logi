@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logi TV - Telewizja Kreskówki i Seriale</title>
+    <!-- Tailwind CSS dla nowoczesnego i szybkiego stylowania -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        aqua: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            900: '#115e59',
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Płynne przejścia dla wszystkich elementów */
+        * {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Stylizowany scrollbar w kolorach Aqua */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #14b8a6;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2dd4bf;
+        }
+    </style>
+</head>
+<body class="bg-[#090d16] text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-aqua-500 selection:text-slate-950">
+
+    <!-- Tło z delikatnym gradientem i poświatą neonową -->
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[500px] bg-gradient-to-b from-aqua-900/10 to-transparent blur-3xl pointer-events-none -z-10"></div>
+
+    <!-- Nagłówek strony -->
+    <header class="w-full max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-800/60">
+        <!-- Logo z efektem pulsowania i aqua glow -->
+        <div class="flex items-center gap-3 group cursor-pointer">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-aqua-600 to-aqua-400 flex items-center justify-center shadow-[0_0_20px_rgba(45,212,191,0.4)] group-hover:scale-105 group-hover:shadow-[0_0_30px_rgba(45,212,191,0.6)]">
+                <!-- Ikona telewizorka / logo -->
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6 text-[#090d16]">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 20.25h12m-7.5-3v3m3-3v3m-10.125-3h17.25c.621 0 1.125-.504 1.125-1.125V4.875c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125Z" />
+                </svg>
+            </div>
+            <span class="text-2xl font-black tracking-wider bg-gradient-to-r from-white via-slate-100 to-aqua-400 bg-clip-text text-transparent group-hover:to-aqua-300">
+                LOGI <span class="text-aqua-400 drop-shadow-[0_0_10px_rgba(45,212,191,0.5)]">TV</span>
+            </span>
+        </div>
+
+        <!-- Opis / Slogan -->
+        <div class="text-slate-400 text-sm font-medium text-center sm:text-right">
+            Twoje ulubione <span class="text-aqua-400">kreskówki i seriale</span> w jednym miejscu!
+        </div>
+    </header>
+
+    <!-- Główna zawartość (Odtwarzacz) -->
+    <main class="flex-grow w-full max-w-5xl mx-auto px-4 py-8 flex flex-col items-center justify-center">
+        <!-- Kontener odtwarzacza z ramką aqua i zaokrągleniami -->
+        <div class="w-full aspect-video rounded-2xl overflow-hidden border border-slate-800 bg-slate-950/80 shadow-[0_20px_50px_rgba(9,13,22,0.9)] backdrop-blur-sm relative group max-w-4xl hover:border-aqua-500/30">
+            
+            <!-- Górny pasek kontrolny w stylu premium z diodą LIVE -->
+            <div class="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-slate-950 to-transparent flex items-center justify-between px-6 z-10 pointer-events-none opacity-80 group-hover:opacity-100">
+                <div class="flex items-center gap-2">
+                    <span class="flex h-2 w-2 relative">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-slate-300">Transmisja Na Żywo</span>
+                </div>
+                <div class="text-xs font-semibold text-aqua-400 tracking-wider">LOGI PLAYER v1.0</div>
+            </div>
+
+            <!-- Ramka iFrame z odtwarzaczem live -->
+            <iframe 
+                src="https://kodikpl.github.io/logi/player.html" 
+                class="w-full h-full border-none"
+                allow="autoplay; encrypted-media; picture-in-picture" 
+                allowfullscreen>
+            </iframe>
+
+            <!-- Dolny cienki pasek dekoracyjny reagujący na hover -->
+            <div class="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-aqua-500 to-transparent opacity-30 group-hover:opacity-100"></div>
+        </div>
+
+        <!-- Prosta sekcja informacyjna pod playerem -->
+        <div class="mt-8 text-center max-w-md animate-float">
+            <h1 class="text-xl font-bold text-white mb-2">Oglądasz Logi TV Live</h1>
+            <p class="text-slate-400 text-sm leading-relaxed">
+                Wygodny, bezpłatny odtwarzacz bezpośrednio w Twojej przeglądarce. Usiądź wygodnie i ciesz się najlepszą rozrywką bez zbędnych komplikacji!
+            </p>
+        </div>
+    </main>
+
+    <!-- Stopka z linkami społecznościowymi -->
+    <footer class="w-full max-w-6xl mx-auto px-6 py-8 border-t border-slate-800/60 flex flex-col sm:flex-row items-center justify-between gap-6 text-sm text-slate-400">
+        
+        <!-- Prawa autorskie i informacja o kodowaniu -->
+        <div class="flex flex-col items-center sm:items-start gap-1">
+            <div>&copy; 2026 Logi TV. Wszelkie prawa zastrzeżone.</div>
+            <div class="text-xs text-slate-500 flex items-center gap-1">
+                <span>Ta strona została</span>
+                <span class="text-aqua-400 font-medium hover:scale-105 inline-block">vibe-kodowana przez gemini</span>
+                <span>✨</span>
+            </div>
+        </div>
+
+        <!-- Social Media (Ikony YouTube i TikTok) -->
+        <div class="flex items-center gap-4">
+            <!-- YouTube -->
+            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" class="p-3 rounded-full bg-slate-900 border border-slate-800 text-slate-400 hover:text-red-500 hover:border-red-500/50 hover:bg-red-950/10 hover:shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:-translate-y-1" title="YouTube">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" class="w-5 h-5">
+                    <path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.01.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.108-.104 1.981l-.007.104-.023.257-.01.104c-.047.513-.118 1.016-.22 1.397a2.01 2.01 0 0 1-1.415 1.42c-1.12.301-5.285.33-6.11.335a50.124 50.124 0 0 1-.09 0c-.822-.003-4.987-.032-6.11-.335a2.01 2.01 0 0 1-1.415-1.42c-.101-.38-.172-.882-.22-1.402l-.01-.104-.022-.26-.008-.104C.065 11.02.057 10.165.057 9.977v-.075c.001-.194.01-1.108.104-1.981l.007-.104.023-.257.01-.104c.047-.513.118-1.016.22-1.397a2.01 2.01 0 0 1 1.415-1.42c1.12-.301 4.285-.33 6.11-.335zm0 9.014 3.73-2.126-3.73-2.126z"/>
+                </svg>
+            </a>
+
+            <!-- TikTok -->
+            <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" class="p-3 rounded-full bg-slate-900 border border-slate-800 text-slate-400 hover:text-aqua-400 hover:border-aqua-500/50 hover:bg-aqua-950/10 hover:shadow-[0_0_15px_rgba(45,212,191,0.2)] hover:-translate-y-1" title="TikTok">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" class="w-5 h-5">
+                    <path d="M9 0h1.98c.144.32.34.61.588.85.25.24.54.44.86.58a4.42 4.42 0 0 0 2.25.54v2a2.42 2.42 0 0 1-1.33-.36 2.44 2.44 0 0 1-.83-.88v5.3C12.5 11.5 10.5 13.5 8 13.5s-4.5-2-4.5-4.5 2-4.5 4.5-4.5c.24 0 .47.02.7.06v2A2.43 2.43 0 0 0 8 6.5c-1.38 0-2.5 1.12-2.5 2.5s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5V0z"/>
+                </svg>
+            </a>
+        </div>
+    </footer>
+
+</body>
+</html>
