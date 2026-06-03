@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plyr HLS Full Page Player</title>
+
+  <!-- Plyr -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.css" />
+
+  <style>
+    :root {
+      --aqua: #22d3c5;
+      --aqua-dark: #10b9ad;
+      --bg: #000;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      overflow: hidden;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .stage {
+      position: fixed;
+      inset: 0;
+      background: #000;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    /* Plyr theme overrides */
+    .plyr {
+      --plyr-color-main: var(--aqua);
+      --plyr-video-control-background-hover: rgba(34, 211, 197, 0.16);
+      --plyr-video-control-background-focus: rgba(34, 211, 197, 0.22);
+      --plyr-video-control-color: var(--aqua);
+      --plyr-range-fill-background: var(--aqua);
+      --plyr-range-thumb-background: var(--aqua);
+      --plyr-tooltip-background: rgba(16, 185, 173, 0.95);
+      --plyr-tooltip-color: #041111;
+    }
+
+    .plyr__controls button:hover,
+    .plyr__controls button:focus-visible {
+      color: var(--aqua) !important;
+    }
+
+    .plyr__menu__container .plyr__control--forward,
+    .plyr__menu__container .plyr__control--back,
+    .plyr__menu__container button,
+    .plyr__control {
+      color: var(--aqua);
+    }
+
+    .plyr__control--overlaid {
+      background: rgba(34, 211, 197, 0.18);
+      border: 1px solid rgba(34, 211, 197, 0.45);
+    }
+
+    .plyr__control--overlaid:hover {
+      background: rgba(34, 211, 197, 0.28);
+    }
+
+    /* Unmute overlay */
+    .unmute-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.34);
+      z-index: 20;
+      pointer-events: auto;
+    }
+
+    .unmute-overlay.show {
+      display: flex;
+    }
+
+    .unmute-btn {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 22px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #001010;
+      background: linear-gradient(180deg, #5ef5ea, var(--aqua));
+      box-shadow: 0 10px 30px rgba(34, 211, 197, 0.3);
+    }
+
+    .unmute-btn:active {
+      transform: translateY(1px);
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <video id="player" playsinline></video>
+
+    <div id="unmuteOverlay" class="unmute-overlay" aria-hidden="true">
+      <button id="unmuteBtn" class="unmute-btn" type="button">Unmute &amp; Play</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.polyfilled.js"></script>
+  <script>
+    const STREAM_URL = 'https://live20.bozztv.com/giatvplayout7/giatv-211832/tracks-v1a1/mono.ts.m3u8';
+
+    const video = document.getElementById('player');
+    const overlay = document.getElementById('unmuteOverlay');
+    const unmuteBtn = document.getElementById('unmuteBtn');
+
+    // Start with audio on; if autoplay is blocked, show the unmute overlay.
+    video.autoplay = true;
+    video.playsInline = true;
+    video.controls = true;
+    video.preload = 'auto';
+    video.crossOrigin = 'anonymous';
+    video.src = STREAM_URL;
+
+    const player = new Plyr(video, {
+      controls: [
+        'play-large', 'play', 'progress', 'current-time', 'mute', 'volume',
+        'captions', 'settings', 'pip', 'airplay', 'fullscreen'
+      ],
+      clickToPlay: true,
+      hideControls: true,
+      resetOnEnd: false
+    });
+
+    function showOverlay() {
+      overlay.classList.add('show');
+      overlay.setAttribute('aria-hidden', 'false');
+    }
+
+    function hideOverlay() {
+      overlay.classList.remove('show');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
+
+    async function tryAutoplayWithSound() {
+      try {
+        video.muted = false;
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.then === 'function') {
+          await playPromise;
+        }
+        hideOverlay();
+      } catch (err) {
+        // Browser blocked autoplay with sound.
+        showOverlay();
+      }
+    }
+
+    // HLS handling for non-Safari browsers.
+    if (window.Hls && Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true
+      });
+      hls.loadSource(STREAM_URL);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        tryAutoplayWithSound();
+      });
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        console.error('HLS error:', data);
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = STREAM_URL;
+      video.addEventListener('loadedmetadata', tryAutoplayWithSound, { once: true });
+    } else {
+      console.error('HLS is not supported in this browser.');
+    }
+
+    unmuteBtn.addEventListener('click', async () => {
+      video.muted = false;
+      try {
+        await video.play();
+      } catch (err) {
+        console.error('Play after unmute failed:', err);
+      }
+      hideOverlay();
+    });
+
+    // If the user manually unmutes from the player controls, also hide the overlay.
+    video.addEventListener('play', () => {
+      if (!video.muted) hideOverlay();
+    });
+  </script>
+</body>
+</html>
