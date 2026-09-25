@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="pl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Plyr HLS Full Page Player</title>
 
-  <!-- Plyr -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.css" />
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.css" />
 
   <style>
     :root {
@@ -37,7 +37,6 @@
       background: #000;
     }
 
-    /* Plyr theme overrides */
     .plyr {
       --plyr-color-main: var(--aqua);
       --plyr-video-control-background-hover: rgba(34, 211, 197, 0.16);
@@ -70,6 +69,58 @@
       background: rgba(34, 211, 197, 0.28);
     }
 
+    /* Loading overlay */
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.78);
+      color: #fff;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .loading-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      text-align: center;
+    }
+
+    .spinner {
+      width: 38px;
+      height: 38px;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      border-top-color: var(--aqua);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .loading-text {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .loading-subtext {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.65);
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     /* Unmute overlay */
     .unmute-overlay {
       position: absolute;
@@ -78,7 +129,7 @@
       align-items: center;
       justify-content: center;
       background: rgba(0, 0, 0, 0.34);
-      z-index: 20;
+      z-index: 40;
       pointer-events: auto;
     }
 
@@ -104,101 +155,542 @@
     }
   </style>
 </head>
+
 <body>
   <div class="stage">
+
     <video id="player" playsinline></video>
 
-    <div id="unmuteOverlay" class="unmute-overlay" aria-hidden="true">
-      <button id="unmuteBtn" class="unmute-btn" type="button">Unmute &amp; Play</button>
+    <div id="loadingOverlay" class="loading-overlay">
+      <div class="loading-box">
+        <div class="spinner"></div>
+        <div id="loadingText" class="loading-text">
+          Ładowanie 1/3
+        </div>
+        <div id="loadingSubtext" class="loading-subtext">
+          Sprawdzanie strumienia...
+        </div>
+      </div>
+    </div>
+
+    <div id="unmuteOverlay"
+         class="unmute-overlay"
+         aria-hidden="true">
+
+      <button id="unmuteBtn"
+              class="unmute-btn"
+              type="button">
+        Unmute &amp; Play
+      </button>
+
     </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
   <script src="https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.polyfilled.js"></script>
+
   <script>
-    const STREAM_URL = 'https://live20.bozztv.com/giatvplayout7/giatv-211832/tracks-v1a1/mono.ts.m3u8';
+    const HLS_STREAMS = [
+      "https://edge9.popler.tv/popler_publishlive2/braknazwy987/playlist.m3u8",
+      "https://stream.playboxtv.pl.eu.org/stream/logitv/index.m3u8",
+      "https://183.bozztv.com/giatv/giatv-logitv/logitv/playlist.m3u8"
+    ];
 
-    const video = document.getElementById('player');
-    const overlay = document.getElementById('unmuteOverlay');
-    const unmuteBtn = document.getElementById('unmuteBtn');
+    const FALLBACK_VIDEO =
+      "https://kodikpl.github.io/logi/bufor.mp4";
 
-    // Start with audio on; if autoplay is blocked, show the unmute overlay.
+    const video = document.getElementById("player");
+
+    const loadingOverlay =
+      document.getElementById("loadingOverlay");
+
+    const loadingText =
+      document.getElementById("loadingText");
+
+    const loadingSubtext =
+      document.getElementById("loadingSubtext");
+
+    const overlay =
+      document.getElementById("unmuteOverlay");
+
+    const unmuteBtn =
+      document.getElementById("unmuteBtn");
+
+    let hls = null;
+    let currentStreamIndex = -1;
+    let streamStarted = false;
+    let fallbackStarted = false;
+
     video.autoplay = true;
     video.playsInline = true;
     video.controls = true;
-    video.preload = 'auto';
-    video.crossOrigin = 'anonymous';
-    video.src = STREAM_URL;
+    video.preload = "auto";
+    video.crossOrigin = "anonymous";
 
     const player = new Plyr(video, {
       controls: [
-        'play-large', 'play', 'progress', 'current-time', 'mute', 'volume',
-        'captions', 'settings', 'pip', 'airplay', 'fullscreen'
+        "play-large",
+        "play",
+        "progress",
+        "current-time",
+        "mute",
+        "volume",
+        "captions",
+        "settings",
+        "pip",
+        "airplay",
+        "fullscreen"
       ],
       clickToPlay: true,
       hideControls: true,
       resetOnEnd: false
     });
 
+
+    /* =========================
+       UI
+    ========================= */
+
+    function showLoading(attempt) {
+      loadingOverlay.classList.remove("hidden");
+
+      loadingText.textContent =
+        `Ładowanie ${attempt}/${HLS_STREAMS.length}`;
+
+      loadingSubtext.textContent =
+        "Sprawdzanie strumienia...";
+    }
+
+    function hideLoading() {
+      loadingOverlay.classList.add("hidden");
+    }
+
     function showOverlay() {
-      overlay.classList.add('show');
-      overlay.setAttribute('aria-hidden', 'false');
+      overlay.classList.add("show");
+      overlay.setAttribute("aria-hidden", "false");
     }
 
     function hideOverlay() {
-      overlay.classList.remove('show');
-      overlay.setAttribute('aria-hidden', 'true');
+      overlay.classList.remove("show");
+      overlay.setAttribute("aria-hidden", "true");
     }
 
-    async function tryAutoplayWithSound() {
-      try {
-        video.muted = false;
-        const playPromise = video.play();
-        if (playPromise && typeof playPromise.then === 'function') {
-          await playPromise;
+
+    /* =========================
+       HLS
+    ========================= */
+
+    function destroyHls() {
+      if (hls) {
+        try {
+          hls.destroy();
+        } catch (e) {
+          console.warn("HLS destroy error:", e);
         }
-        hideOverlay();
-      } catch (err) {
-        // Browser blocked autoplay with sound.
-        showOverlay();
+
+        hls = null;
       }
     }
 
-    // HLS handling for non-Safari browsers.
-    if (window.Hls && Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true
-      });
-      hls.loadSource(STREAM_URL);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        tryAutoplayWithSound();
-      });
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        console.error('HLS error:', data);
-      });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = STREAM_URL;
-      video.addEventListener('loadedmetadata', tryAutoplayWithSound, { once: true });
-    } else {
-      console.error('HLS is not supported in this browser.');
+
+    function startFallback() {
+      if (fallbackStarted) return;
+
+      fallbackStarted = true;
+      streamStarted = false;
+
+      destroyHls();
+
+      console.warn(
+        "Żaden HLS nie działa. Uruchamiam fallback:",
+        FALLBACK_VIDEO
+      );
+
+      loadingText.textContent = "Ładowanie bufora";
+      loadingSubtext.textContent = "Przełączanie na materiał awaryjny...";
+
+      video.src = FALLBACK_VIDEO;
+      video.loop = true;
+
+      video.load();
+
+      video.play()
+        .then(() => {
+          hideLoading();
+
+          if (!video.muted) {
+            hideOverlay();
+          }
+        })
+        .catch(err => {
+          console.error(
+            "Nie udało się uruchomić fallbacku:",
+            err
+          );
+
+          hideLoading();
+          showOverlay();
+        });
     }
 
-    unmuteBtn.addEventListener('click', async () => {
-      video.muted = false;
-      try {
-        await video.play();
-      } catch (err) {
-        console.error('Play after unmute failed:', err);
-      }
-      hideOverlay();
-    });
 
-    // If the user manually unmutes from the player controls, also hide the overlay.
-    video.addEventListener('play', () => {
-      if (!video.muted) hideOverlay();
-    });
+    function nextStream() {
+      if (fallbackStarted) return;
+
+      currentStreamIndex++;
+
+      if (currentStreamIndex >= HLS_STREAMS.length) {
+        startFallback();
+        return;
+      }
+
+      const attempt = currentStreamIndex + 1;
+      const streamUrl = HLS_STREAMS[currentStreamIndex];
+
+      console.log(
+        `Próba ${attempt}/${HLS_STREAMS.length}:`,
+        streamUrl
+      );
+
+      showLoading(attempt);
+
+      streamStarted = false;
+
+      destroyHls();
+
+      /*
+       * HLS.js
+       */
+      if (window.Hls && Hls.isSupported()) {
+
+        hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+
+          /*
+           * Krótsze timeouty pozwalają szybciej
+           * przejść do następnego źródła.
+           */
+          manifestLoadingTimeOut: 5000,
+          manifestLoadingMaxRetry: 0,
+          levelLoadingTimeOut: 5000,
+          levelLoadingMaxRetry: 0,
+          fragLoadingTimeOut: 7000,
+          fragLoadingMaxRetry: 0
+        });
+
+        let failed = false;
+
+        const fail = () => {
+          if (failed || streamStarted || fallbackStarted) {
+            return;
+          }
+
+          failed = true;
+
+          console.warn(
+            `Strumień ${attempt}/${HLS_STREAMS.length} nie działa.`
+          );
+
+          destroyHls();
+
+          /*
+           * Mała pauza zapobiega gwałtownemu
+           * przełączaniu między źródłami.
+           */
+          setTimeout(() => {
+            nextStream();
+          }, 150);
+        };
+
+
+        hls.loadSource(streamUrl);
+        hls.attachMedia(video);
+
+
+        hls.on(
+          Hls.Events.MANIFEST_PARSED,
+          async () => {
+
+            /*
+             * Manifest istnieje, ale sprawdzamy też,
+             * czy video faktycznie zacznie odtwarzać.
+             */
+            try {
+              video.muted = false;
+
+              const playPromise = video.play();
+
+              if (
+                playPromise &&
+                typeof playPromise.then === "function"
+              ) {
+                await playPromise;
+              }
+
+              streamStarted = true;
+
+              hideLoading();
+
+              if (!video.muted) {
+                hideOverlay();
+              }
+
+              console.log(
+                `Działa strumień ${attempt}/${HLS_STREAMS.length}`
+              );
+
+            } catch (err) {
+
+              /*
+               * Autoplay z dźwiękiem może być zablokowany
+               * przez przeglądarkę. To NIE oznacza,
+               * że HLS jest uszkodzony.
+               *
+               * Próbujemy więc uruchomić go wyciszonego.
+               */
+              try {
+
+                video.muted = true;
+
+                await video.play();
+
+                streamStarted = true;
+
+                hideLoading();
+                showOverlay();
+
+                console.log(
+                  `Działa strumień ${attempt}/${HLS_STREAMS.length}, ` +
+                  "autoplay wymaga wyciszenia."
+                );
+
+              } catch (playError) {
+
+                console.warn(
+                  "Nie udało się uruchomić HLS:",
+                  playError
+                );
+
+                fail();
+              }
+            }
+          }
+        );
+
+
+        hls.on(
+          Hls.Events.ERROR,
+          (event, data) => {
+
+            console.error(
+              "HLS error:",
+              data
+            );
+
+            /*
+             * Błąd fatalny = źródło traktujemy jako
+             * niedziałające i przechodzimy dalej.
+             */
+            if (data && data.fatal) {
+              fail();
+            }
+          }
+        );
+
+
+        /*
+         * Dodatkowe zabezpieczenie:
+         * jeśli manifest w ogóle nie odpowie,
+         * po 8 sekundach przechodzimy dalej.
+         */
+        setTimeout(() => {
+
+          if (
+            !streamStarted &&
+            currentStreamIndex === attempt - 1
+          ) {
+            console.warn(
+              `Timeout strumienia ${attempt}/${HLS_STREAMS.length}`
+            );
+
+            fail();
+          }
+
+        }, 8000);
+
+
+        return;
+      }
+
+
+      /*
+       * Safari / natywne HLS
+       */
+      if (
+        video.canPlayType(
+          "application/vnd.apple.mpegurl"
+        )
+      ) {
+
+        let finished = false;
+
+        const fail = () => {
+          if (finished || streamStarted) return;
+
+          finished = true;
+
+          video.removeEventListener(
+            "loadedmetadata",
+            success
+          );
+
+          video.removeEventListener(
+            "error",
+            fail
+          );
+
+          nextStream();
+        };
+
+
+        const success = async () => {
+
+          if (finished) return;
+
+          finished = true;
+
+          try {
+
+            video.muted = false;
+
+            await video.play();
+
+            streamStarted = true;
+
+            hideLoading();
+            hideOverlay();
+
+          } catch (err) {
+
+            try {
+
+              video.muted = true;
+
+              await video.play();
+
+              streamStarted = true;
+
+              hideLoading();
+              showOverlay();
+
+            } catch (playError) {
+              fail();
+            }
+          }
+        };
+
+
+        video.src = streamUrl;
+
+        video.addEventListener(
+          "loadedmetadata",
+          success,
+          { once: true }
+        );
+
+        video.addEventListener(
+          "error",
+          fail,
+          { once: true }
+        );
+
+        video.load();
+
+        setTimeout(() => {
+          if (!streamStarted) {
+            fail();
+          }
+        }, 8000);
+
+        return;
+      }
+
+
+      /*
+       * Brak obsługi HLS.
+       */
+      console.error(
+        "HLS nie jest obsługiwany w tej przeglądarce."
+      );
+
+      nextStream();
+    }
+
+
+    /* =========================
+       Unmute
+    ========================= */
+
+    unmuteBtn.addEventListener(
+      "click",
+      async () => {
+
+        try {
+
+          video.muted = false;
+
+          await video.play();
+
+          hideOverlay();
+
+        } catch (err) {
+
+          console.error(
+            "Play after unmute failed:",
+            err
+          );
+
+        }
+      }
+    );
+
+
+    /*
+     * Jeśli użytkownik sam włączy dźwięk,
+     * usuwamy overlay.
+     */
+    video.addEventListener(
+      "volumechange",
+      () => {
+
+        if (!video.muted) {
+          hideOverlay();
+        }
+
+      }
+    );
+
+
+    video.addEventListener(
+      "play",
+      () => {
+
+        if (!video.muted) {
+          hideOverlay();
+        }
+
+      }
+    );
+
+
+    /* =========================
+       Start
+    ========================= */
+
+    nextStream();
+
   </script>
 </body>
 </html>
